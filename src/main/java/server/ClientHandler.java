@@ -34,9 +34,11 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket clientSocket) {
         this.clientSocket = clientSocket;
         this.gson = new Gson();
+        System.out.println("Initialising DAOs...");
         this.songDao = DaoFactory.getSongDao();
         this.singerDao = DaoFactory.getSingerDao();
         this.performanceDao = DaoFactory.getPerformanceDao();
+        System.out.println("DAOs initialised successfully.");
     }
 
     /**

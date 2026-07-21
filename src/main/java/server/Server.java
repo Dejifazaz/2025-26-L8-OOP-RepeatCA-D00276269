@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
  */
 public class Server {
 
-    private static final int PORT = 5000;
+    private static final int PORT = 5001;
     private ServerSocket serverSocket;
     private ExecutorService threadPool;
     private boolean running;

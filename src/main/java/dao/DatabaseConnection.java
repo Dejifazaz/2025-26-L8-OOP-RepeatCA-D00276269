@@ -13,7 +13,7 @@ public class DatabaseConnection {
     private static DatabaseConnection instance;
     private Connection connection;
 
-    private static final String URL = "jdbc:mysql://localhost:3306/gospel_catalogue";
+    private static final String URL = "jdbc:mysql://localhost:3306/gospel_catalogue?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
     private static final String USERNAME = "root";
     private static final String PASSWORD = "";
 
