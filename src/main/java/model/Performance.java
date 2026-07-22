@@ -12,6 +12,14 @@ public class Performance {
     private String churchName;
     private String performanceDate;
 
+    // No-arg constructor required for Gson deserialisation
+    public Performance() {
+        this.singerId = 1;
+        this.songId = 1;
+        this.churchName = "";
+        this.performanceDate = "";
+    }
+
     // Constructor
     public Performance(int performanceId, int singerId, int songId, String churchName, String performanceDate) {
         setPerformanceId(performanceId);

@@ -14,6 +14,16 @@ public class Song {
     private int durationSeconds;
     private double bpm;
 
+    // No-arg constructor required for Gson deserialisation
+    public Song() {
+        this.title = "";
+        this.artist = "";
+        this.album = "";
+        this.yearReleased = 1800;
+        this.durationSeconds = 1;
+        this.bpm = 1.0;
+    }
+
     // Constructor
     public Song(int songId, String title, String artist, String album, int yearReleased, int durationSeconds, double bpm) {
         setSongId(songId);

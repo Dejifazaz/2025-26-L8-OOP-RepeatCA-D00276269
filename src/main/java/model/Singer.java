@@ -12,6 +12,14 @@ public class Singer {
     private String homeChurch;
     private int yearActive;
 
+    // No-arg constructor required for Gson deserialisation
+    public Singer() {
+        this.name = "";
+        this.vocalType = "";
+        this.homeChurch = "";
+        this.yearActive = 1800;
+    }
+
     // Constructor
     public Singer(int singerId, String name, String vocalType, String homeChurch, int yearActive) {
         setSingerId(singerId);
