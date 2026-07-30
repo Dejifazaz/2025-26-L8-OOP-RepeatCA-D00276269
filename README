@@ -1,0 +1,225 @@
+# Gospel Music Catalogue
+**Module:** COMP C8Z03 — Object-Oriented Programming
+**Assessment:** Summer Repeat CA
+**Student ID:** D00276269
+
+---
+
+## 1. What This Project Is
+
+I built a networked gospel music catalogue in Java. The idea came from my own interest in contemporary gospel music — the artists in this project are ones I actually listen to, like Theophilus Sunday, Nathaniel Bassey, Florence Kisiwaa, Kaestrings, Ryan Ofei, Sewa, Bridge Music, Steffany Gretzinger and Elevation Worship.
+
+The system lets a user connect to a server over a socket, then add, view, update and delete gospel songs, singers and performances. Everything goes through a JSON protocol — the client sends a request, the server processes it, calls the database and sends back a response.
+
+There are three tables in the database:
+- **song** — stores gospel tracks with title, artist, album, year, duration and BPM
+- **singer** — stores artists with their name, vocal type, home church and year they became active
+- **performance** — links a singer to a song at a specific church and date
+
+---
+
+## 2. How to Run It
+
+**What you need:**
+- Java 22
+- Maven
+- XAMPP with MySQL/MariaDB running
+- IntelliJ IDEA
+
+**Setting up the database:**
+1. Open XAMPP and start MySQL
+2. Go to `http://localhost/phpmyadmin` in your browser
+3. Click the SQL tab
+4. Paste in the contents of `src/main/resources/mysqlSetup.sql`
+5. Click Go — it will create the database, tables and insert all the seed data
+
+**Running the app:**
+1. Open the project in IntelliJ
+2. Run `server.Server` first — you should see "Server started on port 5001"
+3. Then run `client.Client` in a separate run config
+4. A menu will appear — use the numbers to pick an option
+
+**Running the tests:**
+1. Right click the `src/test/java/dao` folder
+2. Choose Run 'Tests in dao' with Coverage
+3. All 31 tests should pass
+
+---
+
+## 3. Architecture
+
+The app is split into layers — client talks to server, server talks to DAO, DAO talks to the database. The diagram below shows how everything connects and where the design patterns sit.
+
+```mermaid
+graph TD
+    A[Client] -->|JSON Request| B[Server]
+    B -->|New thread per client| C[ClientHandler - Runnable]
+    C -->|Gets DAO from| D[DaoFactory - Factory Pattern]
+    D --> E[JdbcSongDao]
+    D --> F[JdbcSingerDao]
+    D --> G[JdbcPerformanceDao]
+    E --> H[Dao Interface]
+    F --> H
+    G --> H
+    E --> I[DatabaseConnection - Singleton Pattern]
+    F --> I
+    G --> I
+    I -->|JDBC| J[(gospel_catalogue)]
+    C -->|JSON Response| A
+```
+
+---
+
+## 4. JSON Protocol
+
+Every request the client sends looks like this:
+```json
+{ "requestType": "GET_ALL_SONGS", "payload": null }
+```
+
+Every response from the server looks like this:
+```json
+{ "status": "OK", "message": "Retrieved 10 songs", "data": [ ... ] }
+```
+
+Here are all the supported request types:
+
+**GET_ALL_SONGS**
+```
+Request:  { "requestType": "GET_ALL_SONGS", "payload": null }
+Success:  { "status": "OK", "message": "Retrieved 10 songs", "data": [ ...songs ] }
+Error:    { "status": "ERROR", "message": "Server error: ...", "data": null }
+```
+
+**GET_SONG_BY_ID**
+```
+Request:  { "requestType": "GET_SONG_BY_ID", "payload": {"id": 1} }
+Success:  { "status": "OK", "message": "Song retrieved successfully", "data": { ...song } }
+Error:    { "status": "ERROR", "message": "Song not found for id 99", "data": null }
+```
+
+**ADD_SONG**
+```
+Request:  { "requestType": "ADD_SONG", "payload": {"title": "...", "artist": "...", "album": "...", "yearReleased": 2020, "durationSeconds": 300, "bpm": 75.0} }
+Success:  { "status": "OK", "message": "Song added successfully", "data": { ...song with id } }
+Error:    { "status": "ERROR", "message": "Server error: ...", "data": null }
+```
+
+**UPDATE_SONG**
+```
+Request:  { "requestType": "UPDATE_SONG", "payload": {"id": 1, "song": {"title": "...", "artist": "...", "album": "...", "yearReleased": 2020, "durationSeconds": 300, "bpm": 75.0}} }
+Success:  { "status": "OK", "message": "Song updated successfully", "data": { ...updated song } }
+Error:    { "status": "ERROR", "message": "Server error: ...", "data": null }
+```
+
+**DELETE_SONG**
+```
+Request:  { "requestType": "DELETE_SONG", "payload": {"id": 1} }
+Success:  { "status": "OK", "message": "Song deleted successfully", "data": null }
+Error:    { "status": "ERROR", "message": "Song not found for id 99", "data": null }
+```
+
+**GET_ALL_SINGERS**
+```
+Request:  { "requestType": "GET_ALL_SINGERS", "payload": null }
+Success:  { "status": "OK", "message": "Retrieved 10 singers", "data": [ ...singers ] }
+Error:    { "status": "ERROR", "message": "Server error: ...", "data": null }
+```
+
+**GET_ALL_PERFORMANCES**
+```
+Request:  { "requestType": "GET_ALL_PERFORMANCES", "payload": null }
+Success:  { "status": "OK", "message": "Retrieved 10 performances", "data": [ ...performances ] }
+Error:    { "status": "ERROR", "message": "Server error: ...", "data": null }
+```
+
+**DISCONNECT**
+```
+Request:  { "requestType": "DISCONNECT", "payload": null }
+Success:  { "status": "OK", "message": "Disconnected successfully", "data": null }
+```
+
+---
+
+## 5. Design Patterns
+
+### Singleton — DatabaseConnection.java
+
+The problem I was trying to solve here was simple — I didn't want every DAO opening its own database connection. That would mean three separate connections just sitting there for every client that connects, which is wasteful.
+
+The Singleton pattern fixes this by making it impossible to create more than one `DatabaseConnection`. The constructor is private, so nothing outside the class can call `new DatabaseConnection()`. The only way to get the connection is through `getInstance()`, which creates it once and returns the same one every time after that.
+
+I chose this over just passing a connection around as a parameter because it's cleaner — the DAOs just call `DatabaseConnection.getInstance().getConnection()` and they always get the same shared connection without needing to know where it came from.
+
+### Factory — DaoFactory.java
+
+Without a factory, `ClientHandler` would have to write `new JdbcSongDao()`, `new JdbcSingerDao()` and `new JdbcPerformanceDao()` directly. That ties the server code to the specific JDBC implementations.
+
+`DaoFactory` centralises all of that. The server just asks for a DAO and gets one back — it only ever sees the `Dao<T, K>` interface, not the implementation behind it. If I ever needed to swap `JdbcSongDao` for a different implementation, I'd change one line in `DaoFactory` and nothing else in the app would need to change.
+
+---
+
+## 6. Exception Handling
+
+I created a custom exception called `EntityNotFoundException` in the `exception` package. It extends `RuntimeException` so it's unchecked, and it stores two fields — `entityType` and `entityId` — so the error message is always specific about what went wrong.
+
+For example when a client asks for song ID 99 and it doesn't exist:
+```java
+songDao.getById(99)
+    .orElseThrow(() -> new EntityNotFoundException("Song", 99));
+```
+This throws `EntityNotFoundException` with the message "Song not found for id 99".
+
+That exception gets caught in `ClientHandler.handleRequest()` and turned into a proper error response:
+```json
+{ "status": "ERROR", "message": "Song not found for id 99", "data": null }
+```
+
+The client never sees a stack trace. The server never crashes because of a bad request. SQLExceptions are also caught inside the DAO methods and wrapped before re-throwing, so raw JDBC errors never reach the server layer.
+
+---
+
+## 7. Test Coverage
+
+31 tests across three test classes, all passing:
+
+| Test Class | Tests |
+|:--|:--:|
+| JdbcSongDaoTest | 10 |
+| JdbcSingerDaoTest | 10 |
+| JdbcPerformanceDaoTest | 11 |
+
+Each test class covers getAll, getById, insert, update, delete, findByFilter, a JSON round trip and the EntityNotFoundException behaviour.
+
+Coverage from IntelliJ built-in runner:
+- Class: 80%
+- Method: 90%
+- Line: 89%
+
+Screenshot saved to `/reports/coverage.png`.
+
+---
+
+## 8. References
+
+Bloch, J. (2018) *Effective Java*. 3rd edn. Boston: Addison-Wesley.
+
+Freeman, E. and Robson, E. (2020) *Head First Design Patterns*. 2nd edn. Sebastopol: O'Reilly Media.
+
+Gamma, E., Helm, R., Johnson, R. and Vlissides, J. (1994) *Design Patterns: Elements of Reusable Object-Oriented Software*. Boston: Addison-Wesley.
+
+Google (2023) *Gson User Guide*. Available at: https://github.com/google/gson/blob/main/UserGuide.md (Accessed: 15 June 2025).
+
+Oracle (2023) *JDBC Database Access*. Available at: https://docs.oracle.com/javase/tutorial/jdbc/index.html (Accessed: 15 June 2025).
+
+JUnit Team (2023) *JUnit 5 User Guide*. Available at: https://junit.org/junit5/docs/current/user-guide/ (Accessed: 15 June 2025).
+
+---
+
+## 9. AI Usage Declaration
+
+I used Claude by Anthropic as a learning aid while building this project. I used it to help me understand concepts like generics, Optional, Predicate, design patterns and how sockets work in Java. It also helped me debug a database connection issue with XAMPP on Mac.
+
+All the code in this project was typed by me. I understand what every file does and I'm ready to explain any of it at the oral defence.
+
+This is declared in line with DkIT's Generative AI Guide for Students.
