@@ -9,16 +9,24 @@ import java.util.function.Predicate;
 
 /**
  * JDBC implementation of Dao for the Performance entity.
+ * Handles all database operations for gospel performances using PreparedStatement.
  * @author D00276269
  */
 public class JdbcPerformanceDao implements Dao<Performance, Integer> {
 
     private final Connection connection;
 
+    /**
+     * Constructs a JdbcPerformanceDao using the shared database connection.
+     */
     public JdbcPerformanceDao() {
         this.connection = DatabaseConnection.getInstance().getConnection();
     }
 
+    /**
+     * Retrieves all performances from the database.
+     * @return List of all Performance objects, empty list if none found
+     */
     @Override
     public List<Performance> getAll() {
         List<Performance> performances = new ArrayList<>();
@@ -39,6 +47,11 @@ public class JdbcPerformanceDao implements Dao<Performance, Integer> {
         return performances;
     }
 
+    /**
+     * Retrieves a performance by its ID.
+     * @param id the performance_id to search for
+     * @return Optional containing the Performance if found, empty Optional if not
+     */
     @Override
     public Optional<Performance> getById(Integer id) {
         String sql = "SELECT * FROM performance WHERE performance_id = ?";
@@ -59,6 +72,12 @@ public class JdbcPerformanceDao implements Dao<Performance, Integer> {
         return Optional.empty();
     }
 
+    /**
+     * Inserts a new performance into the database and returns it with the generated ID.
+     * @param entity the Performance to insert (performance_id is ignored)
+     * @return the inserted Performance with the auto-generated performance_id populated
+     * @throws RuntimeException if the insert fails or no ID is generated
+     */
     @Override
     public Performance insert(Performance entity) {
         String sql = "INSERT INTO performance (singer_id, song_id, church_name, performance_date) VALUES (?, ?, ?, ?)";
@@ -86,6 +105,13 @@ public class JdbcPerformanceDao implements Dao<Performance, Integer> {
         throw new RuntimeException("Insert failed — no ID generated");
     }
 
+    /**
+     * Updates an existing performance in the database.
+     * @param id the performance_id of the record to update
+     * @param entity the Performance containing the updated field values
+     * @return the updated Performance object
+     * @throws RuntimeException if the update fails
+     */
     @Override
     public Performance update(Integer id, Performance entity) {
         String sql = "UPDATE performance SET singer_id = ?, song_id = ?, church_name = ?, performance_date = ? WHERE performance_id = ?";
@@ -107,6 +133,12 @@ public class JdbcPerformanceDao implements Dao<Performance, Integer> {
         }
     }
 
+    /**
+     * Deletes a performance from the database by its ID.
+     * @param id the performance_id of the record to delete
+     * @return true if a record was deleted, false if no record matched the ID
+     * @throws RuntimeException if the delete fails
+     */
     @Override
     public boolean deleteById(Integer id) {
         String sql = "DELETE FROM performance WHERE performance_id = ?";
@@ -121,6 +153,11 @@ public class JdbcPerformanceDao implements Dao<Performance, Integer> {
         }
     }
 
+    /**
+     * Returns all performances that match the given filter predicate.
+     * @param filter a Predicate lambda used to test each Performance
+     * @return List of Performances that pass the filter test
+     */
     @Override
     public List<Performance> findByFilter(Predicate<Performance> filter) {
         List<Performance> allPerformances = getAll();
@@ -135,6 +172,12 @@ public class JdbcPerformanceDao implements Dao<Performance, Integer> {
         return filteredPerformances;
     }
 
+    /**
+     * Maps the current row of a ResultSet to a Performance object.
+     * @param resultSet the ResultSet positioned at the current row
+     * @return a Performance object built from the current row's column values
+     * @throws SQLException if a column value cannot be retrieved
+     */
     private Performance mapRowToPerformance(ResultSet resultSet) throws SQLException {
         return new Performance(
                 resultSet.getInt("performance_id"),

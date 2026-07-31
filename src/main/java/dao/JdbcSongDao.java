@@ -9,16 +9,24 @@ import java.util.function.Predicate;
 
 /**
  * JDBC implementation of Dao for the Song entity.
+ * Handles all database operations for gospel songs using PreparedStatement.
  * @author D00276269
  */
 public class JdbcSongDao implements Dao<Song, Integer> {
 
     private final Connection connection;
 
+    /**
+     * Constructs a JdbcSongDao using the shared database connection.
+     */
     public JdbcSongDao() {
         this.connection = DatabaseConnection.getInstance().getConnection();
     }
 
+    /**
+     * Retrieves all songs from the database.
+     * @return List of all Song objects, empty list if none found
+     */
     @Override
     public List<Song> getAll() {
         List<Song> songs = new ArrayList<>();
@@ -39,20 +47,11 @@ public class JdbcSongDao implements Dao<Song, Integer> {
         return songs;
     }
 
-    private Song mapRowToSong(ResultSet resultSet) throws SQLException {
-        return new Song(
-                resultSet.getInt("song_id"),
-                resultSet.getString("title"),
-                resultSet.getString("artist"),
-                resultSet.getString("album"),
-                resultSet.getInt("year_released"),
-                resultSet.getInt("duration_seconds"),
-                resultSet.getDouble("bpm")
-        );
-
-
-    }
-
+    /**
+     * Retrieves a song by its ID.
+     * @param id the song_id to search for
+     * @return Optional containing the Song if found, empty Optional if not
+     */
     @Override
     public Optional<Song> getById(Integer id) {
         String sql = "SELECT * FROM song WHERE song_id = ?";
@@ -72,6 +71,13 @@ public class JdbcSongDao implements Dao<Song, Integer> {
 
         return Optional.empty();
     }
+
+    /**
+     * Inserts a new song into the database and returns it with the generated ID.
+     * @param entity the Song to insert (song_id is ignored)
+     * @return the inserted Song with the auto-generated song_id populated
+     * @throws RuntimeException if the insert fails or no ID is generated
+     */
     @Override
     public Song insert(Song entity) {
         String sql = "INSERT INTO song (title, artist, album, year_released, duration_seconds, bpm) VALUES (?, ?, ?, ?, ?, ?)";
@@ -100,6 +106,14 @@ public class JdbcSongDao implements Dao<Song, Integer> {
 
         throw new RuntimeException("Insert failed — no ID generated");
     }
+
+    /**
+     * Updates an existing song in the database.
+     * @param id the song_id of the record to update
+     * @param entity the Song containing the updated field values
+     * @return the updated Song object
+     * @throws RuntimeException if the update fails
+     */
     @Override
     public Song update(Integer id, Song entity) {
         String sql = "UPDATE song SET title = ?, artist = ?, album = ?, year_released = ?, duration_seconds = ?, bpm = ? WHERE song_id = ?";
@@ -122,6 +136,13 @@ public class JdbcSongDao implements Dao<Song, Integer> {
             throw new RuntimeException("Error updating song with id " + id, e);
         }
     }
+
+    /**
+     * Deletes a song from the database by its ID.
+     * @param id the song_id of the record to delete
+     * @return true if a record was deleted, false if no record matched the ID
+     * @throws RuntimeException if the delete fails
+     */
     @Override
     public boolean deleteById(Integer id) {
         String sql = "DELETE FROM song WHERE song_id = ?";
@@ -135,6 +156,12 @@ public class JdbcSongDao implements Dao<Song, Integer> {
             throw new RuntimeException("Error deleting song with id " + id, e);
         }
     }
+
+    /**
+     * Returns all songs that match the given filter predicate.
+     * @param filter a Predicate lambda used to test each Song
+     * @return List of Songs that pass the filter test
+     */
     @Override
     public List<Song> findByFilter(Predicate<Song> filter) {
         List<Song> allSongs = getAll();
@@ -147,5 +174,23 @@ public class JdbcSongDao implements Dao<Song, Integer> {
         }
 
         return filteredSongs;
+    }
+
+    /**
+     * Maps the current row of a ResultSet to a Song object.
+     * @param resultSet the ResultSet positioned at the current row
+     * @return a Song object built from the current row's column values
+     * @throws SQLException if a column value cannot be retrieved
+     */
+    private Song mapRowToSong(ResultSet resultSet) throws SQLException {
+        return new Song(
+                resultSet.getInt("song_id"),
+                resultSet.getString("title"),
+                resultSet.getString("artist"),
+                resultSet.getString("album"),
+                resultSet.getInt("year_released"),
+                resultSet.getInt("duration_seconds"),
+                resultSet.getDouble("bpm")
+        );
     }
 }
